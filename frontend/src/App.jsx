@@ -18,7 +18,7 @@ export default function App() {
     setError(null);
     setReport(null);
     try {
-      const response = await axios.post(`${API_BASE}/audit`, { url });
+      const response = await axios.post(`${API_BASE}/api/audit`, { url });
       setReport(response.data);
     } catch (err) {
       const message =
