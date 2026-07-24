@@ -16,7 +16,7 @@ function createApp() {
   res.send("Page Pulse API is running!");
   });
 
-  //app.use("/api", auditRouter);
+  app.use("/api", auditRouter);
 
   // 404 handler
   app.use((_req, res) => {
