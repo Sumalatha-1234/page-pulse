@@ -1,0 +1,54 @@
+:root {
+  --bg: #0b0e0d;
+  --surface: #121613;
+  --surface-raised: #161b17;
+  --border: #23291f;
+  --border-strong: #333c2f;
+  --text-primary: #e9ece7;
+  --text-secondary: #9aa89e;
+  --text-muted: #616e64;
+  --signal: #3ddc97;
+  --signal-dim: #1f5f43;
+  --amber: #e8a33d;
+  --coral: #e8615d;
+  --font-display: "JetBrains Mono", ui-monospace, monospace;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--signal);
+}
+
+button {
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: var(--signal-dim);
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
