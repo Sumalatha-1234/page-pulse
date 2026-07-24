@@ -12,6 +12,10 @@ function createApp() {
     res.status(200).json({ status: "ok" });
   });
 
+  app.get("/", (_req, res) => {
+  res.send("Page Pulse API is running!");
+  });
+
   app.use("/api", auditRouter);
 
   // 404 handler
