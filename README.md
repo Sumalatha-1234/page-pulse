@@ -1,14 +1,37 @@
 # Page Pulse
 
-A small tool that audits any URL: it fetches the page, checks the HTTP status
-and timing, and reports basic SEO/accessibility signals (title, meta
-description, H1 count, image alt-text coverage, word count).
+A small tool that audits any URL: it fetches the page, checks the HTTP status and response timing, and reports basic SEO/accessibility signals including title, meta description, H1 count, image alt-text coverage, and approximate word count.
 
 Built for the Digital Heroes SDE qualification task (Task A + Task B).
 
-- **Backend:** Node.js, Express, Axios, Cheerio
-- **Frontend:** React (Vite)
-- **Tests:** Jest, Supertest, Nock
+## Live Demo
+
+Frontend:
+
+```
+<YOUR_VERCEL_URL>
+```
+
+Backend API:
+
+```
+https://page-pulse-production-df6d.up.railway.app
+```
+
+Health check:
+
+```
+GET https://page-pulse-production-df6d.up.railway.app/api/health
+```
+
+## Tech Stack
+
+* **Backend:** Node.js, Express, Axios, Cheerio
+* **Frontend:** React (Vite)
+* **Testing:** Jest, Supertest, Nock
+* **Deployment:** Railway (Backend), Vercel (Frontend)
+
+## Project Structure
 
 ```
 page-pulse/
@@ -20,11 +43,11 @@ page-pulse/
 │   │   ├── services/
 │   │   │   └── auditService.js # Fetches + parses the target page
 │   │   └── utils/
-│   │       └── validateUrl.js  # Input validation / SSRF guard
+│   │       └── validateUrl.js  # Input validation / SSRF protection
 │   └── tests/
 │       ├── validateUrl.test.js
-│       ├── auditService.test.js  # Parsing logic: happy path + 2 failure cases
-│       └── audit.route.test.js   # HTTP-level integration tests
+│       ├── auditService.test.js
+│       └── audit.route.test.js
 └── frontend/
     └── src/
         ├── App.jsx
@@ -32,61 +55,87 @@ page-pulse/
             ├── AuditForm.jsx
             ├── ReportCard.jsx
             ├── ErrorBanner.jsx
-            ├── PulseLine.jsx      # Loading indicator
+            ├── PulseLine.jsx
             └── Footer.jsx
 ```
 
-## 1. Setup
+# 1. Setup
 
-### Prerequisites
-- Node.js 18+
-- npm 9+
+## Prerequisites
 
-### Backend
+* Node.js 18+
+* npm 9+
+
+## Backend Setup
 
 ```bash
 cd backend
-cp .env.example .env
 npm install
-npm run dev        # starts on http://localhost:4000
+npm run dev
 ```
 
-### Frontend
+Backend runs locally on:
+
+```
+http://localhost:4000
+```
+
+## Frontend Setup
 
 ```bash
 cd frontend
 npm install
-npm run dev         # starts on http://localhost:5173
+npm run dev
 ```
 
-The Vite dev server proxies `/api/*` to `http://localhost:4000` (see
-`frontend/vite.config.js`), so no extra config is needed for local
-development. For a deployed backend, set `VITE_API_BASE_URL` — see
-`frontend/.env.example`.
+Frontend runs locally on:
 
-### Running tests
+```
+http://localhost:5173
+```
+
+For local development, the frontend communicates with the backend API.
+
+For deployment, configure:
+
+```
+VITE_API_BASE_URL
+```
+
+with the Railway backend URL.
+
+## Running Tests
 
 ```bash
 cd backend
 npm test
 ```
 
-Tests use `nock` to mock all outbound HTTP calls, so they run fully offline
-and deterministically — no real network access is required or made.
+Tests use mocked HTTP requests, so they run deterministically without making real external network calls.
 
-## 2. API contract
+Current test status:
 
-### `POST /api/audit`
-
-Fetches the given URL and returns an audit report.
-
-**Request body**
-
-```json
-{ "url": "https://example.com" }
+```
+17 tests passed
 ```
 
-**Success response — `200 OK`**
+---
+
+# 2. API Contract
+
+## POST `/api/audit`
+
+Fetches the provided URL and returns an audit report.
+
+### Request
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### Success Response - 200 OK
 
 ```json
 {
@@ -96,119 +145,242 @@ Fetches the given URL and returns an audit report.
   "title": "Example Domain",
   "metaDescription": null,
   "h1Count": 1,
-  "images": { "total": 0, "missingAlt": 0 },
+  "images": {
+    "total": 0,
+    "missingAlt": 0
+  },
   "wordCount": 28,
   "checkedAt": "2026-07-24T10:15:00.000Z"
 }
 ```
 
-**Error responses** — all errors share the shape `{ "error": { "message": string, "code": string } }`
+## Error Response Format
 
-| Status | Code                  | Meaning                                              |
-| ------ | --------------------- | ----------------------------------------------------- |
-| 400    | `INVALID_URL`          | Missing, malformed, non-http(s), or a local/private address |
-| 422    | `NON_HTML_RESPONSE`    | The target responded with a non-HTML content type     |
-| 502    | `UPSTREAM_HTTP_ERROR`  | The target page returned an HTTP 4xx/5xx status        |
-| 502    | `DNS_ERROR`            | The domain could not be resolved                       |
-| 502    | `CONNECTION_REFUSED`   | The target server refused the connection                |
-| 502    | `FETCH_FAILED`         | Any other network-level failure                        |
-| 504    | `TIMEOUT`              | The target didn't respond within 8 seconds              |
-| 500    | `INTERNAL_ERROR`       | Unexpected server-side error (never a crash)             |
+All errors follow:
 
-### `GET /api/health`
+```json
+{
+  "error": {
+    "message": "error message",
+    "code": "ERROR_CODE"
+  }
+}
+```
 
-Returns `{ "status": "ok" }` — used for uptime checks and deployment smoke tests.
+## Error Codes
 
-## 3. Design decisions
+| Status | Code                | Meaning                          |
+| ------ | ------------------- | -------------------------------- |
+| 400    | INVALID_URL         | Invalid or unsafe URL            |
+| 422    | NON_HTML_RESPONSE   | Response is not HTML             |
+| 502    | UPSTREAM_HTTP_ERROR | Target page returned 4xx/5xx     |
+| 502    | DNS_ERROR           | Domain could not be resolved     |
+| 502    | CONNECTION_REFUSED  | Target server refused connection |
+| 502    | FETCH_FAILED        | Other network failure            |
+| 504    | TIMEOUT             | Request exceeded timeout         |
+| 500    | INTERNAL_ERROR      | Unexpected server error          |
 
-**1. `fetchPage` and `analyzeHtml` are separate functions in `auditService.js`.**
-Network I/O and pure HTML parsing are different concerns with different
-failure modes and different test strategies. Splitting them means the parsing
-logic (title, H1 count, alt-text coverage, word count) can be unit-tested
-directly on a string of HTML with no HTTP involved, while network failures
-(timeouts, DNS, non-2xx) are tested by mocking the transport layer with
-`nock`. This keeps tests fast and precise about which layer failed.
+## GET `/api/health`
 
-**2. All failure modes funnel into one `AuditError` class carrying an HTTP
-status and a machine-readable code.** Rather than throwing raw Axios errors
-or generic `Error` objects, every anticipated failure (invalid URL, timeout,
-DNS failure, non-HTML content, upstream 4xx/5xx) is normalized into the same
-shape before it reaches the route handler. The route only needs one
-`instanceof AuditError` check to decide how to respond, and the frontend only
-needs to read `error.error.message`. Anything that *isn't* an `AuditError` is
-treated as a genuine bug and logged, then returned as a generic 500 — so the
-process never crashes on unexpected input and the person calling the API
-always gets a consistent JSON shape.
+Returns:
 
-**3. URL validation blocks localhost and private IP ranges before any
-request is made.** Because the endpoint fetches a URL supplied by the
-client, it's a classic SSRF surface — without this check, the service could
-be used to probe internal infrastructure that happens to be reachable from
-the server. `validateUrl.js` rejects non-http(s) protocols and known
-local/private hostnames up front, before Axios ever opens a connection. This
-is a deliberately simple heuristic (not exhaustive DNS-rebinding protection)
-appropriate for the scope of this task, called out explicitly here as a
-known limitation rather than left implicit.
+```json
+{
+  "status": "ok"
+}
+```
 
-## 4. What I'd change with another day
+Used for deployment health checks.
 
-- Add DNS-level SSRF protection (resolve the hostname first and check the
-  resolved IP, not just the literal hostname in the URL — this closes the
-  DNS-rebinding gap in decision #3 above).
-- Cache recent audits by URL for a short TTL to avoid hammering the same
-  target on repeated submissions.
-- Add a request-rate limiter (e.g. `express-rate-limit`) in front of
-  `/api/audit` since it proxies outbound requests on the caller's behalf.
-- Expand the report with more accessibility checks (heading order, link text
-  quality, image dimensions) and a basic performance signal (page weight).
+---
 
-## 5. Deployment
+# 3. Design Decisions
 
-### Backend → Render
+## 1. Separate page fetching and HTML analysis
 
-1. Push this repo to GitHub.
-2. In Render: **New → Web Service**, connect the repo, set **Root
-   Directory** to `backend`.
-3. Build command: `npm install`. Start command: `npm start`.
-4. Add environment variable `PORT` is set automatically by Render — no
-   action needed (the app already reads `process.env.PORT`).
-5. Deploy. Note the resulting URL, e.g. `https://page-pulse-api.onrender.com`.
-6. Sanity check: `curl https://page-pulse-api.onrender.com/api/health`.
+`fetchPage()` and `analyzeHtml()` are separated inside `auditService.js`.
 
-### Frontend → Vercel
+The reason is that network communication and HTML parsing have different responsibilities and failure cases.
 
-1. In Vercel: **Add New → Project**, import the same repo, set **Root
-   Directory** to `frontend`.
-2. Framework preset: Vite. Build command: `npm run build`. Output directory:
-   `dist`.
-3. Add environment variable `VITE_API_BASE_URL` =
-   `https://page-pulse-api.onrender.com/api` (your Render URL + `/api`).
-4. Deploy.
+This separation allows HTML parsing logic to be tested independently without making real HTTP requests, while network failures can be tested separately through mocked requests.
 
-### CORS note
+---
 
-The backend enables `cors()` with default (permissive) settings so it can be
-called from any deployed frontend origin without extra configuration. For a
-stricter production setup, restrict it to the known Vercel domain via
-`cors({ origin: "https://your-frontend.vercel.app" })`.
+## 2. Centralized error handling using AuditError
 
-## 6. Loom demo script (2–3 min)
+All expected failures are converted into a custom `AuditError` class containing:
 
-1. **(0:00–0:20)** Show the live URL. State what it does in one sentence:
-   audits a URL for status, timing, and basic SEO/accessibility signals.
-2. **(0:20–0:50)** Run a real audit against a normal site. Point out the
-   status pill, response time, word count, H1 count, and alt-text coverage
-   updating.
-3. **(0:50–1:20)** Run the two failure cases live:
-   - An invalid string (e.g. `not a url`) → show the 400 error inline.
-   - A URL that 404s → show the 502 error inline, and note it doesn't crash
-     the app.
-4. **(1:20–1:50)** Switch to the code. Open `auditService.js`, show
-   `fetchPage` vs `analyzeHtml`, and explain design decision #1 out loud.
-5. **(1:50–2:20)** Open `audit.route.test.js`, run `npm test`, show the
-   happy path and the two failure-case tests passing.
-6. **(2:20–2:50)** Walkthrough + self-critique: pick one real thing you'd
-   change with more time (e.g. the SSRF DNS-rebinding gap from section 4)
-   and explain, concretely, what you'd do differently and why.
-7. **(2:50–3:00)** Close by pointing at the GitHub repo link and the footer
-   credit line.
+* HTTP status code
+* machine-readable error code
+* user-friendly message
+
+This keeps API responses consistent and prevents raw Axios errors from leaking to clients.
+
+Unexpected errors are handled separately and return a safe 500 response instead of crashing the application.
+
+---
+
+## 3. URL validation for SSRF protection
+
+Since the API fetches user-provided URLs, it can become a Server-Side Request Forgery (SSRF) risk.
+
+The application validates URLs before making requests by blocking:
+
+* invalid protocols
+* localhost addresses
+* private IP ranges
+
+This prevents the service from being used to access internal resources.
+
+A future improvement would be validating resolved DNS IP addresses to protect against DNS rebinding attacks.
+
+---
+
+# 4. Improvements With More Time
+
+If I had another day to improve Page Pulse, I would:
+
+* Add DNS-level SSRF protection by validating resolved IP addresses.
+* Add caching for repeated audits to reduce unnecessary requests.
+* Add rate limiting to protect the audit endpoint.
+* Expand accessibility checks such as heading order, link quality, and image dimensions.
+* Add performance metrics such as page size and loading resources.
+
+---
+
+# 5. Deployment
+
+## Backend Deployment - Railway
+
+The backend is deployed using Railway.
+
+Backend URL:
+
+```
+https://page-pulse-production-df6d.up.railway.app
+```
+
+The server starts using:
+
+```bash
+npm start
+```
+
+Railway automatically provides the required PORT environment variable.
+
+Health check:
+
+```
+https://page-pulse-production-df6d.up.railway.app/api/health
+```
+
+---
+
+## Frontend Deployment - Vercel
+
+The frontend is deployed using Vercel.
+
+Configuration:
+
+* Framework: Vite
+* Build command:
+
+```bash
+npm run build
+```
+
+* Output directory:
+
+```
+dist
+```
+
+Environment variable:
+
+```
+VITE_API_BASE_URL=https://page-pulse-production-df6d.up.railway.app
+```
+
+The frontend sends requests to:
+
+```
+POST /api/audit
+```
+
+---
+
+# 6. Loom Demo Plan (2-3 minutes)
+
+## 0:00 - 0:30
+
+Show the deployed application.
+
+Explain:
+
+"Page Pulse audits any URL and provides HTTP status, response time, SEO details, and accessibility information."
+
+## 0:30 - 1:00
+
+Run an audit using:
+
+```
+https://example.com
+```
+
+Show:
+
+* HTTP status
+* Response time
+* Title
+* H1 count
+* Image alt coverage
+* Word count
+
+## 1:00 - 1:30
+
+Show failure handling:
+
+Example:
+
+```
+invalid-url
+```
+
+Explain how the application returns errors without crashing.
+
+## 1:30 - 2:00
+
+Show backend code:
+
+Open:
+
+```
+backend/src/services/auditService.js
+```
+
+Explain the separation between:
+
+* fetchPage()
+* analyzeHtml()
+
+## 2:00 - 2:30
+
+Show tests:
+
+Run:
+
+```bash
+npm test
+```
+
+Show:
+
+```
+17 tests passed
+```
+
+## Final explanation
+
+Mention one improvement:
+
+"With more time, I would add DNS-based SSRF protection and caching for repeated audits."
