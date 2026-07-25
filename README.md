@@ -379,6 +379,8 @@ Show:
 17 tests passed
 ```
 
+AI Usage: I used ChatGPT to better understand deployment, testing, and API design concepts, and to review my code and documentation. I verified every suggestion, made the necessary changes myself, debugged the frontend and backend integration, and customized the implementation to ensure the final project worked correctly and reflected my own understanding.
+
 ## Final explanation
 
 Mention one improvement:
